@@ -26,18 +26,20 @@ Or, install directly from GitHub:
 ## Usage
 
 ```python
-from bio_ml_handler import BioMLDataHandler
+# Initialize handler with paths to data folders
+handler = BioMLDataHandler(data_path='data', split_data_path='split_data')
 
-# Initialize handler without data path
-handler = BioMLDataHandler()
+# Prepare data in fingerprint format (for model training and evaluation)
+handler.prepare_train_data(representation='fingerprint')
+handler.prepare_validation_data(representation='fingerprint')
+handler.prepare_test_data(representation='fingerprint')
 
-# Download and load data
-bio_ml_path = handler.download_data(competition_name='bio-ml')
-
-# Prepare data
-handler.prepare_train_data()
+# Train and evaluate the model
 handler.train_model()
 print("Model Average Precision Score:", handler.evaluate_model())
+
+# Export train_split data to JSONL format with SMILES representation
+handler.export_to_jsonl(handler.train_split, 'train_split.jsonl')
 
 # Generate submission file
 handler.generate_submission('submission.csv')
