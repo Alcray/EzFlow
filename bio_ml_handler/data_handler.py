@@ -77,6 +77,23 @@ class BioMLDataHandler:
         self.prepare_train_data(representation)
         return self.X_train, self.y_train
 
+    def get_original_train_data(self, representation: str = 'fingerprint') -> (np.ndarray, np.ndarray):
+        """
+        Prepares and returns the original full train data.
+
+        Parameters:
+            representation (str): 'fingerprint' or 'smiles' for feature representation.
+
+        Returns:
+            tuple: Feature matrix (X_full_train) and labels (y_full_train).
+        """
+        if self.train is None:
+            raise ValueError("The full train dataset is not loaded.")
+        
+        self.X_full_train, self.y_full_train = self.prepare_data(self.train, representation)
+        print("Original full training data prepared.")
+        return self.X_full_train, self.y_full_train
+
     def get_test_data(self, representation: str = 'fingerprint') -> np.ndarray:
         """
         Prepares and returns the test data.
