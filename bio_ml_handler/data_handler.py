@@ -64,6 +64,45 @@ class BioMLDataHandler:
         fingerprint = generator.GetFingerprint(mol)
         return np.array(fingerprint)
 
+    def get_train_data(self, representation: str = 'fingerprint') -> (np.ndarray, np.ndarray):
+        """
+        Prepares and returns the train split data.
+
+        Parameters:
+            representation (str): 'fingerprint' or 'smiles' for feature representation.
+
+        Returns:
+            tuple: Feature matrix (X_train) and labels (y_train).
+        """
+        self.prepare_train_data(representation)
+        return self.X_train, self.y_train
+
+    def get_test_data(self, representation: str = 'fingerprint') -> np.ndarray:
+        """
+        Prepares and returns the test data.
+
+        Parameters:
+            representation (str): 'fingerprint' or 'smiles' for feature representation.
+
+        Returns:
+            np.ndarray: Feature matrix (X_test).
+        """
+        self.prepare_test_data(representation)
+        return self.X_test
+
+    def get_val_data(self, representation: str = 'fingerprint') -> (np.ndarray, np.ndarray):
+        """
+        Prepares and returns the validation data.
+
+        Parameters:
+            representation (str): 'fingerprint' or 'smiles' for feature representation.
+
+        Returns:
+            tuple: Feature matrix (X_val) and labels (y_val).
+        """
+        self.prepare_validation_data(representation)
+        return self.X_val, self.y_val
+
     def prepare_data(self, dataset: pd.DataFrame, representation: str = 'fingerprint') -> (np.ndarray, np.ndarray):
         """
         Generates features and labels for a given dataset based on the specified representation.
