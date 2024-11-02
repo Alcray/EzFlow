@@ -20,12 +20,13 @@ A data handler for bioinformatics machine learning tasks, including data loading
 Or, install directly from GitHub:
 
    ```bash
-   pip install git+https://github.com/yourusername/bio_ml_handler.git
+   pip install git+https://github.com/Alcray/BioML.git
    ```
 
 ## Usage
 
 ```python
+from bio_ml_handler import BioMLDataHandler
 # Initialize handler with paths to data folders
 handler = BioMLDataHandler(data_path='data', split_data_path='split_data')
 
