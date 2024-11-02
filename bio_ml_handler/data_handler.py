@@ -1,5 +1,4 @@
 import os
-import kagglehub
 import pandas as pd
 import numpy as np
 from rdkit import Chem
@@ -8,58 +7,43 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score
 
 class BioMLDataHandler:
-    def __init__(self, bio_ml_path: str = None):
+    def __init__(self, data_path: str = 'data', split_data_path: str = 'splitted'):
         """
-        Initializes the data handler and optionally loads the dataset if the path is provided.
+        Initializes the data handler and loads datasets from specified directories.
 
         Parameters:
-            bio_ml_path (str): Path to the bio-ml data directory, if already downloaded.
+            data_path (str): Path to the 'data' directory containing train.csv and test.csv.
+            split_data_path (str): Path to the 'splitted' directory containing train_split.csv and validation_split.csv.
         """
-        self.bio_ml_path = bio_ml_path
+        self.data_path = data_path
+        self.split_data_path = split_data_path
+
         self.train = None
         self.test = None
-        self.sample_submission = None
+        self.train_split = None
+        self.validation_split = None
         self.model = None
 
-        # Load data if path is provided
-        if bio_ml_path:
-            self.load_data(bio_ml_path)
+        # Load datasets
+        self.load_data()
 
-    def download_data(self, competition_name: str = 'bio-ml', destination: str = './bio_ml_data'):
+    def load_data(self):
         """
-        Downloads data from Kaggle using kagglehub, and sets the path to the downloaded data.
-
-        Parameters:
-            competition_name (str): Kaggle competition name.
-            destination (str): Destination directory to download the data.
-
-        Returns:
-            str: Path to the downloaded data directory.
+        Loads data from the specified directories into the handler.
         """
-        # Authenticate and download the data
-        kagglehub.login()
-        bio_ml_path = kagglehub.competition_download(competition_name, path=destination)
-        
-        print('Data source import complete.')
-        print(f'Data downloaded to: {bio_ml_path}')
+        try:
+            # Load the main train and test datasets
+            self.train = pd.read_csv(os.path.join(self.data_path, 'train.csv'))
+            self.test = pd.read_csv(os.path.join(self.data_path, 'test.csv'))
+            print("Main train and test datasets loaded successfully.")
 
-        # Set the data path and load the data
-        self.bio_ml_path = bio_ml_path
-        self.load_data(bio_ml_path)
-        
-        return bio_ml_path
-
-    def load_data(self, path: str):
-        """
-        Loads data from the specified path into the handler.
-
-        Parameters:
-            path (str): Path to the directory containing train.csv, test.csv, and sample_submission.csv.
-        """
-        self.train = pd.read_csv(os.path.join(path, 'train.csv'))
-        self.test = pd.read_csv(os.path.join(path, 'test.csv'))
-        self.sample_submission = pd.read_csv(os.path.join(path, 'sample_submission.csv'))
-        print("Data loaded successfully.")
+            # Load the train and validation splits
+            self.train_split = pd.read_csv(os.path.join(self.split_data_path, 'train_split.csv'))
+            self.validation_split = pd.read_csv(os.path.join(self.split_data_path, 'validation_split.csv'))
+            print("Train and validation splits loaded successfully.")
+        except FileNotFoundError as e:
+            print(f"Error loading data: {e}")
+            raise
 
     @staticmethod
     def generate_fingerprint(smiles: str, radius=2, n_bits=2048) -> np.ndarray:
@@ -79,24 +63,44 @@ class BioMLDataHandler:
         fingerprint = generator.GetFingerprint(mol)
         return np.array(fingerprint)
 
+    def prepare_data(self, dataset: pd.DataFrame) -> (np.ndarray, np.ndarray):
+        """
+        Generates fingerprints and labels for a given dataset.
+
+        Parameters:
+            dataset (pd.DataFrame): DataFrame with 'smiles' and 'activity' columns.
+
+        Returns:
+            tuple: Feature matrix (X) and labels (y).
+        """
+        dataset['fingerprint'] = dataset['smiles'].apply(self.generate_fingerprint)
+        X = np.stack(dataset['fingerprint'].values)
+        y = dataset['activity'].values
+        return X, y
+
     def prepare_train_data(self):
         """
-        Generates fingerprints for the training dataset.
+        Prepares the train split for model training.
         """
-        if self.train is None:
-            raise ValueError("Training data is not loaded.")
-        self.train['fingerprint'] = self.train['smiles'].apply(self.generate_fingerprint)
-        self.X_train = np.stack(self.train['fingerprint'].values)
-        self.y_train = self.train['activity'].values
+        self.X_train, self.y_train = self.prepare_data(self.train_split)
+        print("Training data prepared.")
+
+    def prepare_validation_data(self):
+        """
+        Prepares the validation split for model evaluation.
+        """
+        self.X_val, self.y_val = self.prepare_data(self.validation_split)
+        print("Validation data prepared.")
 
     def prepare_test_data(self):
         """
-        Generates fingerprints for the test dataset.
+        Prepares the test dataset.
         """
         if self.test is None:
             raise ValueError("Test data is not loaded.")
         self.test['fingerprint'] = self.test['smiles'].apply(self.generate_fingerprint)
         self.X_test = np.stack(self.test['fingerprint'].values)
+        print("Test data prepared.")
 
     def train_model(self):
         """
@@ -104,16 +108,21 @@ class BioMLDataHandler:
         """
         self.model = LogisticRegression(solver='liblinear')
         self.model.fit(self.X_train, self.y_train)
+        print("Model trained successfully.")
 
     def evaluate_model(self) -> float:
         """
-        Evaluates the model using average precision score on training data.
+        Evaluates the model using average precision score on validation data.
 
         Returns:
-            float: The average precision score.
+            float: The average precision score on validation data.
         """
-        train_preds = self.predict(self.X_train)
-        return average_precision_score(self.y_train, train_preds)
+        if not hasattr(self, 'X_val') or not hasattr(self, 'y_val'):
+            raise ValueError("Validation data is not prepared.")
+        val_preds = self.predict(self.X_val)
+        score = average_precision_score(self.y_val, val_preds)
+        print(f"Validation Average Precision Score: {score}")
+        return score
 
     def predict(self, fingerprints: np.ndarray) -> np.ndarray:
         """
@@ -125,16 +134,21 @@ class BioMLDataHandler:
         Returns:
             np.ndarray: Array of probabilities for the positive class.
         """
+        if not self.model:
+            raise ValueError("Model is not trained.")
         return self.model.predict_proba(fingerprints)[:, 1]
 
     def generate_submission(self, filename: str = 'submission.csv'):
         """
-        Generates a submission file for Kaggle.
+        Generates a submission file with predictions for the test dataset.
 
         Parameters:
             filename (str): Name of the output submission file. Default is 'submission.csv'.
         """
+        if not hasattr(self, 'X_test'):
+            raise ValueError("Test data is not prepared.")
         test_preds = self.predict(self.X_test)
         self.test['activity'] = test_preds
         submission = self.test[['id', 'activity']]
         submission.to_csv(filename, index=False)
+        print(f"Submission file '{filename}' generated successfully.")

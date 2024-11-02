@@ -1,5 +1,9 @@
 from setuptools import setup, find_packages
 
+# Read requirements.txt for dependencies
+with open("requirements.txt") as f:
+    required = f.read().splitlines()
+
 setup(
     name="bio_ml_handler",
     version="0.1.0",
@@ -8,12 +12,7 @@ setup(
     author_email="hayrapetyan.alexan@gmail.com",
     url="https://github.com/Alcray/BioML",
     packages=find_packages(),
-    install_requires=[
-        "pandas",
-        "numpy",
-        "scikit-learn",
-        "rdkit-pypi",
-    ],
+    install_requires=required,  # Use the list from requirements.txt
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
