@@ -1,355 +1,390 @@
+"""
+Helper functions for the ezflow framework.
+"""
+
 import os
-import json
-import pickle
-import numpy as np
-import pandas as pd
-from typing import Dict, Any, List, Optional, Union, Tuple
-import time
 import logging
-from functools import wraps
-import hashlib
+import time
+import json
 import yaml
-from datetime import datetime
+from typing import Dict, Any, List, Optional, Union, Callable
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from functools import wraps
 
-logger = logging.getLogger("ezflow.utils")
+logger = logging.getLogger(__name__)
 
-def timed(func):
+def setup_logging(
+    log_file: Optional[str] = None,
+    console_level: int = logging.INFO,
+    file_level: int = logging.DEBUG
+) -> logging.Logger:
     """
-    Decorator for timing function execution.
+    Set up logging configuration.
     
     Args:
-        func: Function to time
+        log_file (Optional[str]): Path to log file. If None, only console logging is enabled.
+        console_level (int): Logging level for console output.
+        file_level (int): Logging level for file output.
         
     Returns:
-        Wrapped function with timing
+        logging.Logger: Configured logger.
     """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        end = time.time()
-        logger.info(f"Function {func.__name__} executed in {end - start:.2f} seconds")
-        return result
-    return wrapper
-
-
-def generate_hash(obj: Any) -> str:
-    """
-    Generate a hash from an object.
+    # Create root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)  # Capture all levels
     
-    Args:
-        obj: Object to hash
-        
-    Returns:
-        String hash of the object
-    """
-    if isinstance(obj, (pd.DataFrame, pd.Series)):
-        data = obj.to_json()
-    elif isinstance(obj, np.ndarray):
-        data = obj.tobytes()
-    elif isinstance(obj, (dict, list, tuple)):
-        data = json.dumps(obj, sort_keys=True).encode('utf-8')
-    else:
-        data = str(obj).encode('utf-8')
+    # Clear existing handlers
+    root_logger.handlers = []
     
-    return hashlib.md5(data).hexdigest()
-
-
-def load_config(config_path: str) -> Dict[str, Any]:
-    """
-    Load configuration from a YAML or JSON file.
-    
-    Args:
-        config_path: Path to the configuration file
-        
-    Returns:
-        Configuration dictionary
-    """
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Config file not found at {config_path}")
-    
-    ext = os.path.splitext(config_path)[1].lower()
-    
-    with open(config_path, 'r') as f:
-        if ext in ['.yaml', '.yml']:
-            config = yaml.safe_load(f)
-        elif ext == '.json':
-            config = json.load(f)
-        else:
-            raise ValueError(f"Unsupported config file extension: {ext}")
-    
-    return config
-
-
-def save_config(config: Dict[str, Any], config_path: str) -> None:
-    """
-    Save configuration to a YAML or JSON file.
-    
-    Args:
-        config: Configuration dictionary
-        config_path: Path to save the configuration file
-    """
-    os.makedirs(os.path.dirname(config_path), exist_ok=True)
-    
-    ext = os.path.splitext(config_path)[1].lower()
-    
-    with open(config_path, 'w') as f:
-        if ext in ['.yaml', '.yml']:
-            yaml.dump(config, f, default_flow_style=False)
-        elif ext == '.json':
-            json.dump(config, f, indent=2)
-        else:
-            raise ValueError(f"Unsupported config file extension: {ext}")
-
-
-def save_pickle(obj: Any, file_path: str) -> None:
-    """
-    Save object to pickle file.
-    
-    Args:
-        obj: Object to save
-        file_path: Path to save the object
-    """
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    
-    with open(file_path, 'wb') as f:
-        pickle.dump(obj, f)
-
-
-def load_pickle(file_path: str) -> Any:
-    """
-    Load object from pickle file.
-    
-    Args:
-        file_path: Path to the pickle file
-        
-    Returns:
-        Loaded object
-    """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Pickle file not found at {file_path}")
-    
-    with open(file_path, 'rb') as f:
-        obj = pickle.load(f)
-    
-    return obj
-
-
-def setup_logger(log_dir: str = 'logs', log_level: int = logging.INFO) -> logging.Logger:
-    """
-    Set up a logger with file and console handlers.
-    
-    Args:
-        log_dir: Directory to store log files
-        log_level: Logging level
-        
-    Returns:
-        Configured logger
-    """
-    os.makedirs(log_dir, exist_ok=True)
-    
-    # Create logger
-    logger = logging.getLogger('ezflow')
-    logger.setLevel(log_level)
-    
-    # Create handlers
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    file_handler = logging.FileHandler(os.path.join(log_dir, f'ezflow_{timestamp}.log'))
+    # Create console handler
     console_handler = logging.StreamHandler()
+    console_handler.setLevel(console_level)
+    console_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    console_handler.setFormatter(console_formatter)
+    root_logger.addHandler(console_handler)
     
-    # Create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
+    # Create file handler if log_file is provided
+    if log_file:
+        # Create directory if it doesn't exist
+        log_dir = os.path.dirname(log_file)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
+        
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(file_level)
+        file_formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        file_handler.setFormatter(file_formatter)
+        root_logger.addHandler(file_handler)
     
-    # Add handlers to logger
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    # Create a logger for this module
+    logger = logging.getLogger(__name__)
+    logger.info("Logging setup complete")
     
     return logger
 
-
-def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '.') -> Dict[str, Any]:
+def timer(func):
     """
-    Flatten a nested dictionary.
+    Decorator to measure the execution time of a function.
     
     Args:
-        d: Dictionary to flatten
-        parent_key: Parent key for nested dictionaries
-        sep: Separator for keys
+        func (Callable): Function to decorate.
         
     Returns:
-        Flattened dictionary
+        Callable: Decorated function.
     """
-    items = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logger.info(f"Function {func.__name__} executed in {execution_time:.2f} seconds")
+        return result
+    return wrapper
 
-
-def unflatten_dict(d: Dict[str, Any], sep: str = '.') -> Dict[str, Any]:
+def load_config(config_path: str) -> Dict[str, Any]:
     """
-    Unflatten a dictionary with nested keys.
+    Load configuration from a file.
     
     Args:
-        d: Flattened dictionary
-        sep: Separator for keys
+        config_path (str): Path to the configuration file (JSON or YAML).
         
     Returns:
-        Nested dictionary
-    """
-    result = {}
-    for key, value in d.items():
-        parts = key.split(sep)
+        Dict[str, Any]: Configuration dictionary.
         
-        # Traverse the parts and create nested dictionaries
-        current = result
-        for part in parts[:-1]:
-            if part not in current:
-                current[part] = {}
-            current = current[part]
-        
-        current[parts[-1]] = value
-    
-    return result
-
-
-def merge_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+    Raises:
+        ValueError: If the file format is not supported.
     """
-    Merge two dictionaries recursively.
+    logger.info(f"Loading configuration from {config_path}")
     
-    Args:
-        dict1: First dictionary
-        dict2: Second dictionary (overrides values in dict1)
-        
-    Returns:
-        Merged dictionary
-    """
-    result = dict1.copy()
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
     
-    for key, value in dict2.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = merge_dicts(result[key], value)
-        else:
-            result[key] = value
-    
-    return result
-
-
-def get_class_weights(y: np.ndarray, strategy: str = 'balanced') -> Dict[int, float]:
-    """
-    Compute class weights for imbalanced datasets.
-    
-    Args:
-        y: Target labels
-        strategy: Strategy for computing weights ('balanced' or 'balanced_sqrt')
-        
-    Returns:
-        Dictionary mapping class indices to weights
-    """
-    unique_classes, class_counts = np.unique(y, return_counts=True)
-    n_samples = len(y)
-    n_classes = len(unique_classes)
-    
-    # Compute weights based on strategy
-    if strategy == 'balanced':
-        weights = n_samples / (n_classes * class_counts)
-    elif strategy == 'balanced_sqrt':
-        weights = np.sqrt(n_samples / (n_classes * class_counts))
+    if config_path.endswith('.json'):
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+    elif config_path.endswith(('.yaml', '.yml')):
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
     else:
-        raise ValueError(f"Unknown weighting strategy: {strategy}")
+        raise ValueError(f"Unsupported configuration file format: {config_path}")
     
-    # Create dictionary mapping class to weight
-    class_weights = {cls: weight for cls, weight in zip(unique_classes, weights)}
-    
-    return class_weights
+    logger.info(f"Configuration loaded successfully from {config_path}")
+    return config
 
-
-def get_timestamp() -> str:
+def save_config(config: Dict[str, Any], config_path: str) -> None:
     """
-    Get a formatted timestamp string.
-    
-    Returns:
-        Timestamp string in format YYYYMMDD_HHMMSS
-    """
-    return datetime.now().strftime('%Y%m%d_%H%M%S')
-
-
-def create_submission_file(predictions: Union[np.ndarray, List], ids: Union[np.ndarray, List], 
-                          submission_path: str, columns: Optional[List[str]] = None) -> None:
-    """
-    Create a submission file for competitions.
+    Save configuration to a file.
     
     Args:
-        predictions: Predicted values
-        ids: Sample IDs
-        submission_path: Path to save the submission file
-        columns: Column names for the DataFrame
+        config (Dict[str, Any]): Configuration dictionary.
+        config_path (str): Path to save the configuration file.
     """
-    if columns is None:
-        # Create default column names
-        if predictions.ndim == 1 or (predictions.ndim == 2 and predictions.shape[1] == 1):
-            columns = ['id', 'prediction']
-        else:
-            # For multiclass predictions
-            n_classes = predictions.shape[1]
-            columns = ['id'] + [f'class_{i}' for i in range(n_classes)]
+    logger.info(f"Saving configuration to {config_path}")
     
-    # Convert predictions to proper format
-    if predictions.ndim == 1:
-        data = np.column_stack((ids, predictions))
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    
+    if config_path.endswith('.json'):
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=4)
+    elif config_path.endswith(('.yaml', '.yml')):
+        with open(config_path, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False)
     else:
-        data = np.column_stack((ids, predictions))
+        raise ValueError(f"Unsupported configuration file format: {config_path}")
     
-    # Create and save DataFrame
-    df = pd.DataFrame(data, columns=columns)
-    
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(submission_path), exist_ok=True)
-    
-    # Save file
-    df.to_csv(submission_path, index=False)
-    logger.info(f"Submission file saved to {submission_path}")
+    logger.info(f"Configuration saved successfully to {config_path}")
 
-    
-def load_dataset_from_config(config_path: str) -> 'BaseDataset':
+def get_data_summary(df: pd.DataFrame) -> Dict[str, Any]:
     """
-    Load a dataset based on configuration.
+    Get a summary of a DataFrame.
     
     Args:
-        config_path: Path to the configuration file
+        df (pd.DataFrame): Input DataFrame.
         
     Returns:
-        Instantiated dataset
+        Dict[str, Any]: Summary dictionary.
     """
-    from importlib import import_module
+    summary = {
+        'shape': df.shape,
+        'columns': df.columns.tolist(),
+        'dtypes': df.dtypes.apply(lambda x: str(x)).to_dict(),
+        'missing_values': df.isna().sum().to_dict(),
+        'missing_percentage': (df.isna().sum() / len(df) * 100).to_dict(),
+        'numeric_columns': df.select_dtypes(include=np.number).columns.tolist(),
+        'categorical_columns': df.select_dtypes(include=['object', 'category']).columns.tolist(),
+        'datetime_columns': df.select_dtypes(include=['datetime64']).columns.tolist(),
+    }
     
-    config = load_config(config_path)
+    # Add basic statistics for numeric columns
+    if summary['numeric_columns']:
+        summary['numeric_stats'] = df[summary['numeric_columns']].describe().to_dict()
     
-    if 'dataset' not in config:
-        raise ValueError("Configuration must contain a 'dataset' section")
+    # Add basic statistics for categorical columns
+    if summary['categorical_columns']:
+        summary['categorical_stats'] = {
+            col: {
+                'unique_values': df[col].nunique(),
+                'top_values': df[col].value_counts().head(5).to_dict()
+            }
+            for col in summary['categorical_columns']
+        }
     
-    dataset_config = config['dataset']
+    return summary
+
+def plot_missing_values(df: pd.DataFrame, save_path: Optional[str] = None) -> None:
+    """
+    Plot missing values in a DataFrame.
     
-    if 'class' not in dataset_config:
-        raise ValueError("Dataset configuration must specify a 'class'")
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        save_path (Optional[str]): Path to save the plot.
+    """
+    # Calculate missing values
+    missing = df.isna().sum().sort_values(ascending=False)
+    missing_pct = (missing / len(df) * 100).round(2)
     
-    # Get the dataset class
-    class_path = dataset_config['class']
-    module_path, class_name = class_path.rsplit('.', 1)
+    # Get columns with missing values
+    cols_with_missing = missing[missing > 0]
     
-    try:
-        module = import_module(module_path)
-        dataset_class = getattr(module, class_name)
-    except (ImportError, AttributeError) as e:
-        raise ImportError(f"Could not import dataset class '{class_path}': {e}")
+    if cols_with_missing.empty:
+        logger.info("No missing values to plot")
+        return
     
-    # Extract parameters for dataset initialization
-    params = {k: v for k, v in dataset_config.items() if k != 'class'}
+    # Create figure
+    plt.figure(figsize=(12, 8))
+    ax = plt.subplot(111)
     
-    # Create and return dataset instance
-    return dataset_class(**params) 
+    # Plot bars
+    ax.bar(
+        range(len(cols_with_missing)), 
+        cols_with_missing,
+        color='crimson',
+        alpha=0.7
+    )
+    
+    # Add percentage labels
+    for i, val in enumerate(cols_with_missing):
+        pct = missing_pct[cols_with_missing.index[i]]
+        ax.text(
+            i, val + 0.5, f"{pct}%", 
+            ha='center', va='bottom',
+            fontweight='bold'
+        )
+    
+    # Set labels and title
+    plt.xticks(range(len(cols_with_missing)), cols_with_missing.index, rotation=90)
+    plt.ylabel('Number of Missing Values')
+    plt.title('Missing Values by Column')
+    plt.tight_layout()
+    
+    if save_path:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        
+        # Save plot
+        plt.savefig(save_path)
+        plt.close()
+        logger.info(f"Missing values plot saved to {save_path}")
+    else:
+        plt.show()
+
+def memory_usage(df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Calculate the memory usage of a DataFrame.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        
+    Returns:
+        Dict[str, Any]: Memory usage information.
+    """
+    memory_usage = df.memory_usage(deep=True)
+    total_memory = memory_usage.sum()
+    
+    # Get memory usage by data type
+    memory_by_dtype = df.dtypes.map(lambda x: str(x)).value_counts().to_dict()
+    memory_by_dtype = {
+        dtype: df.select_dtypes(include=dtype).memory_usage(deep=True).sum()
+        for dtype in memory_by_dtype
+    }
+    
+    return {
+        'total_memory_bytes': total_memory,
+        'total_memory_mb': total_memory / (1024 * 1024),
+        'memory_by_column': memory_usage.to_dict(),
+        'memory_by_dtype': memory_by_dtype
+    }
+
+def optimize_dataframe_memory(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Optimize the memory usage of a DataFrame by converting data types.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        
+    Returns:
+        pd.DataFrame: Optimized DataFrame.
+    """
+    df_optimized = df.copy()
+    
+    # Memory usage before optimization
+    mem_before = df.memory_usage(deep=True).sum() / (1024 * 1024)
+    logger.info(f"Memory usage before optimization: {mem_before:.2f} MB")
+    
+    # Optimize numeric columns
+    for col in df.select_dtypes(include=np.number).columns:
+        # Convert integer columns to the smallest possible integer type
+        if pd.api.types.is_integer_dtype(df[col]):
+            min_val = df[col].min()
+            max_val = df[col].max()
+            
+            if min_val >= 0:  # Unsigned
+                if max_val < np.iinfo(np.uint8).max:
+                    df_optimized[col] = df[col].astype(np.uint8)
+                elif max_val < np.iinfo(np.uint16).max:
+                    df_optimized[col] = df[col].astype(np.uint16)
+                elif max_val < np.iinfo(np.uint32).max:
+                    df_optimized[col] = df[col].astype(np.uint32)
+            else:  # Signed
+                if min_val > np.iinfo(np.int8).min and max_val < np.iinfo(np.int8).max:
+                    df_optimized[col] = df[col].astype(np.int8)
+                elif min_val > np.iinfo(np.int16).min and max_val < np.iinfo(np.int16).max:
+                    df_optimized[col] = df[col].astype(np.int16)
+                elif min_val > np.iinfo(np.int32).min and max_val < np.iinfo(np.int32).max:
+                    df_optimized[col] = df[col].astype(np.int32)
+        
+        # Convert float columns to float32 if possible
+        elif pd.api.types.is_float_dtype(df[col]):
+            df_optimized[col] = df[col].astype(np.float32)
+    
+    # Optimize categorical columns
+    for col in df.select_dtypes(include=['object']).columns:
+        # Convert string columns to categorical if they have few unique values
+        num_unique = df[col].nunique()
+        num_total = len(df)
+        
+        if num_unique / num_total < 0.5:  # If less than 50% of values are unique
+            df_optimized[col] = df[col].astype('category')
+    
+    # Memory usage after optimization
+    mem_after = df_optimized.memory_usage(deep=True).sum() / (1024 * 1024)
+    savings = (1 - mem_after / mem_before) * 100
+    
+    logger.info(f"Memory usage after optimization: {mem_after:.2f} MB")
+    logger.info(f"Memory savings: {savings:.2f}%")
+    
+    return df_optimized
+
+def create_datetime_features(df: pd.DataFrame, datetime_col: str, drop_original: bool = False) -> pd.DataFrame:
+    """
+    Create datetime features from a datetime column.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        datetime_col (str): Name of the datetime column.
+        drop_original (bool): Whether to drop the original datetime column.
+        
+    Returns:
+        pd.DataFrame: DataFrame with datetime features.
+    """
+    df_new = df.copy()
+    
+    # Check if the column exists
+    if datetime_col not in df.columns:
+        raise ValueError(f"Column '{datetime_col}' not found in DataFrame")
+    
+    # Convert to datetime if not already
+    if not pd.api.types.is_datetime64_dtype(df[datetime_col]):
+        df_new[datetime_col] = pd.to_datetime(df[datetime_col], errors='coerce')
+    
+    # Extract datetime components
+    df_new[f"{datetime_col}_year"] = df_new[datetime_col].dt.year
+    df_new[f"{datetime_col}_month"] = df_new[datetime_col].dt.month
+    df_new[f"{datetime_col}_day"] = df_new[datetime_col].dt.day
+    df_new[f"{datetime_col}_hour"] = df_new[datetime_col].dt.hour
+    df_new[f"{datetime_col}_minute"] = df_new[datetime_col].dt.minute
+    df_new[f"{datetime_col}_second"] = df_new[datetime_col].dt.second
+    df_new[f"{datetime_col}_dayofweek"] = df_new[datetime_col].dt.dayofweek
+    df_new[f"{datetime_col}_dayofyear"] = df_new[datetime_col].dt.dayofyear
+    df_new[f"{datetime_col}_quarter"] = df_new[datetime_col].dt.quarter
+    df_new[f"{datetime_col}_is_weekend"] = df_new[f"{datetime_col}_dayofweek"].isin([5, 6]).astype(int)
+    df_new[f"{datetime_col}_is_month_start"] = df_new[datetime_col].dt.is_month_start.astype(int)
+    df_new[f"{datetime_col}_is_month_end"] = df_new[datetime_col].dt.is_month_end.astype(int)
+    
+    # Drop original column if requested
+    if drop_original:
+        df_new = df_new.drop(columns=[datetime_col])
+    
+    return df_new
+
+def create_cyclical_features(df: pd.DataFrame, col: str, period: int) -> pd.DataFrame:
+    """
+    Create cyclical features for a cyclic variable (e.g., hour of day, month of year).
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        col (str): Name of the column to create cyclical features for.
+        period (int): Cycle period (e.g., 24 for hour of day, 12 for month of year).
+        
+    Returns:
+        pd.DataFrame: DataFrame with cyclical features.
+    """
+    df_new = df.copy()
+    
+    # Check if the column exists
+    if col not in df.columns:
+        raise ValueError(f"Column '{col}' not found in DataFrame")
+    
+    # Create cyclical features using sine and cosine transformations
+    df_new[f"{col}_sin"] = np.sin(2 * np.pi * df[col] / period)
+    df_new[f"{col}_cos"] = np.cos(2 * np.pi * df[col] / period)
+    
+    return df_new 
