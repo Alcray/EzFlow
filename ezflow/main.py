@@ -276,7 +276,7 @@ def deploy_model(model_path: str, deploy_type: str) -> None:
 
 def main():
     """Main CLI function."""
-    parser = argparse.ArgumentParser(description="ezflow - ML framework for hackathons")
+    parser = argparse.ArgumentParser(description="ez - ML framework for hackathons")
     
     # Main commands
     subparsers = parser.add_subparsers(dest="command", help="Command to run")

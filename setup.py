@@ -18,7 +18,7 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "ezflow=ezflow.main:main",
+            "ez=ezflow.main:main",
         ],
     },
     classifiers=[
@@ -35,39 +35,34 @@ setup(
     python_requires=">=3.7",
     install_requires=[
         # Core data processing
-        "numpy>=1.19.0",
-        "pandas>=1.1.0",
+        "numpy>=1.21.0",
+        "pandas>=1.3.0",
         
         # Machine Learning models
-        "scikit-learn>=0.24.0",
-        "xgboost>=1.3.0",
-        "lightgbm>=3.1.0",
-        
-        # Deep Learning support (optional)
-        "torch>=1.7.0",
-        "tensorflow>=2.4.0",
-        
-        # Hyperparameter tuning
-        "optuna>=2.6.0",
-        "hyperopt>=0.2.5",
+        "scikit-learn>=1.0.0",
+        "xgboost>=1.5.0",
         
         # Visualization
-        "matplotlib>=3.3.0",
+        "matplotlib>=3.4.0",
         "seaborn>=0.11.0",
-        "plotly>=4.14.0",
+        
+        # Hyperparameter tuning
+        "optuna>=2.10.0",
+        "hyperopt>=0.2.7",
         
         # Experiment tracking
         "mlflow>=1.14.0",
         
         # Deployment
-        "fastapi>=0.65.0",
-        "streamlit>=0.82.0",
+        "flask>=2.0.0",
+        "streamlit>=1.10.0",
         "uvicorn>=0.13.0",
         
         # Utilities
-        "joblib>=1.0.0",
+        "joblib>=1.1.0",
         "pyyaml>=5.4.0",
         "tqdm>=4.50.0",
+        "python-dotenv>=0.19.0",
     ],
     extras_require={
         "dev": [
@@ -80,6 +75,14 @@ setup(
         "docs": [
             "sphinx>=4.0.0",
             "sphinx-rtd-theme>=0.5.0",
+        ],
+        'api': ["flask>=2.0.0"],
+        'dashboard': ["streamlit>=1.10.0"],
+        'all': [
+            "optuna>=2.10.0",
+            "hyperopt>=0.2.7",
+            "flask>=2.0.0",
+            "streamlit>=1.10.0",
         ],
     },
 )
