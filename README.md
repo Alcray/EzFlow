@@ -1,48 +1,89 @@
-# bio_ml_handler
+# EZFlow: A Machine Learning Framework
 
-A data handler for bioinformatics machine learning tasks, including data loading, processing, and model handling.
+<p align="center">
+  <a href="https://github.com/Alcray/ezflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Alcray/ezflow.svg" alt="License"></a>
+  <a href="https://github.com/Alcray/ezflow/stargazers"><img src="https://img.shields.io/github/stars/Alcray/ezflow.svg" alt="GitHub stars"></a>
+</p>
+
+EZFlow is a flexible, modular machine learning framework designed to streamline the development and deployment of ML pipelines. It provides a unified API for working with different types of datasets, models, and experiment tracking tools.
+
+## Features
+
+- **Simple Dataset API**: Easily load, preprocess, and split various types of data
+- **Unified Pipeline Interface**: Work with scikit-learn, PyTorch, and TensorFlow models using the same interface
+- **Experiment Tracking**: Track metrics, hyperparameters, and artifacts with MLflow integration
+- **Reproducibility**: Ensure experiment reproducibility with configuration management
+- **CLI Tools**: Command-line utilities for project creation and management
 
 ## Installation
 
-1. Clone the repository:
+### Using Conda (Recommended)
 
-   ```bash
-   git clone https://github.com/yourusername/bio_ml_handler.git
-   cd bio_ml_handler
-   ```
+```bash
+# Create and activate the conda environment
+conda env create -f environment.yml
+conda activate ezflow
 
-2. Install the package with pip:
+# Install the package in development mode
+pip install -e .
+```
 
-   ```bash
-   pip install .
-   ```
+### Development Installation
 
-Or, install directly from GitHub:
+```bash
+# Install in development mode from source
+git clone https://github.com/Alcray/ezflow.git
+cd ezflow
+pip install -e .
+```
 
-   ```bash
-   pip install git+https://github.com/Alcray/BioML.git
-   ```
+## Quick Start
 
-## Usage
+### Creating a New Project
+
+```bash
+# Create a new EZFlow project
+ezflow create my_project
+cd my_project
+```
+
+### Running the Iris Example
 
 ```python
-from bio_ml_handler import BioMLDataHandler
-# Initialize handler with paths to data folders
-handler = BioMLDataHandler(data_path='data', split_data_path='split_data')
+from ezflow.core.dataset import IrisDataset
+from ezflow.core.pipeline import SklearnPipelineWrapper
+from ezflow.core.experiment import ExperimentTracker, ExperimentConfig
 
-# Prepare data in fingerprint format (for model training and evaluation)
-handler.prepare_train_data(representation='fingerprint')
-handler.prepare_validation_data(representation='fingerprint')
-handler.prepare_test_data(representation='fingerprint')
+# Create and load dataset
+dataset = IrisDataset(data_dir="./data")
+dataset.load_data()
+dataset.split_data(val_size=0.2)
 
-# Train and evaluate the model
-handler.train_model()
-print("Model Average Precision Score:", handler.evaluate_model())
+# Create pipeline
+pipeline = SklearnPipelineWrapper([
+    ("scaler", "sklearn.preprocessing.StandardScaler", {}),
+    ("classifier", "sklearn.ensemble.RandomForestClassifier", {"n_estimators": 100})
+])
 
-# Export train_split data to JSONL format with SMILES representation
-handler.export_to_jsonl(handler.train_split, 'train_split.jsonl')
+# Train and evaluate
+X_train = dataset.get_features(dataset.train_data)
+y_train = dataset.get_labels(dataset.train_data)
+pipeline.fit(X_train, y_train)
 
-# Generate submission file
-handler.generate_submission('submission.csv')
+# Save model
+pipeline.save("./models/iris_model.joblib")
 ```
----
+
+Or run the included example:
+
+```bash
+python -m ezflow.examples.iris_example
+```
+
+## Data Management
+
+EZFlow works with data stored in the `data/` directory. This directory is included in `.gitignore` to prevent uploading datasets to GitHub. When using the framework, place your datasets in this directory, and they will be automatically used by the dataset classes.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
