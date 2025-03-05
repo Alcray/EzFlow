@@ -5,9 +5,9 @@ with open("requirements.txt") as f:
     required = f.read().splitlines()
 
 setup(
-    name="bio_ml_handler",
+    name="ezflow",
     version="0.1.0",
-    description="A data handler for bio-ML projects, including data loading, processing, and model handling.",
+    description="A streamlined framework for running and tracking ML experiments for hackathons.",
     author="Alexan Hayrapetyan",
     author_email="hayrapetyan.alexan@gmail.com",
     url="https://github.com/Alcray/BioML",
