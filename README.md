@@ -5,10 +5,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yourusername/ezflow/actions"><img src="https://github.com/yourusername/ezflow/workflows/tests/badge.svg" alt="Tests Status"></a>
+  <a href="https://github.com/Alcray/ezflow/actions"><img src="https://github.com/Alcray/ezflow/workflows/tests/badge.svg" alt="Tests Status"></a>
   <a href="https://pypi.org/project/ezflow-ml/"><img src="https://img.shields.io/pypi/v/ezflow-ml.svg" alt="PyPI version"></a>
-  <a href="https://github.com/yourusername/ezflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/yourusername/ezflow.svg" alt="License"></a>
-  <a href="https://github.com/yourusername/ezflow/stargazers"><img src="https://img.shields.io/github/stars/yourusername/ezflow.svg" alt="GitHub stars"></a>
+  <a href="https://github.com/Alcray/ezflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Alcray/ezflow.svg" alt="License"></a>
+  <a href="https://github.com/Alcray/ezflow/stargazers"><img src="https://img.shields.io/github/stars/Alcray/ezflow.svg" alt="GitHub stars"></a>
 </p>
 
 EZFlow is a flexible, modular machine learning framework designed to streamline the development and deployment of ML pipelines. It provides a unified API for working with different types of datasets, models, and experiment tracking tools.
@@ -41,7 +41,7 @@ pip install -e .
 pip install ezflow-ml
 
 # Or install in development mode from source
-git clone https://github.com/yourusername/ezflow.git
+git clone https://github.com/Alcray/ezflow.git
 cd ezflow
 pip install -e .
 ```

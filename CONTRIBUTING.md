@@ -65,7 +65,7 @@ This section guides you through submitting a feature suggestion:
 1. Fork the repository
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/yourusername/ezflow.git
+   git clone https://github.com/Alcray/ezflow.git
    cd ezflow
    ```
 3. Create a conda environment using the provided environment.yml:
