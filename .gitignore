@@ -55,8 +55,10 @@ logs/
 wandb/
 tensorboard/
 
-# Data
+# Data - Comprehensive ignoring of data files and directories
 data/
+data/*
+*/data/*
 *.csv
 *.json
 *.jsonl
@@ -67,6 +69,15 @@ data/
 *.h5
 *.npz
 *.npy
+*.tar
+*.zip
+*.gz
+*.bz2
+*.xz
+*.7z
+*.txt
+!requirements.txt
+!environment.txt
 
 # OS specific
 .DS_Store

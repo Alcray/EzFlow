@@ -5,8 +5,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Alcray/ezflow/actions"><img src="https://github.com/Alcray/ezflow/workflows/tests/badge.svg" alt="Tests Status"></a>
-  <a href="https://pypi.org/project/ezflow-ml/"><img src="https://img.shields.io/pypi/v/ezflow-ml.svg" alt="PyPI version"></a>
   <a href="https://github.com/Alcray/ezflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Alcray/ezflow.svg" alt="License"></a>
   <a href="https://github.com/Alcray/ezflow/stargazers"><img src="https://img.shields.io/github/stars/Alcray/ezflow.svg" alt="GitHub stars"></a>
 </p>
@@ -34,13 +32,10 @@ conda activate ezflow
 pip install -e .
 ```
 
-### Using Pip
+### Development Installation
 
 ```bash
-# Install from PyPI
-pip install ezflow-ml
-
-# Or install in development mode from source
+# Install in development mode from source
 git clone https://github.com/Alcray/ezflow.git
 cd ezflow
 pip install -e .
@@ -89,21 +84,9 @@ Or run the included example:
 python -m ezflow.examples.iris_example
 ```
 
-## Documentation
+## Data Management
 
-For more detailed documentation, please see:
-
-- [Architecture Overview](docs/architecture.md)
-- [Dataset Module](docs/dataset.md)
-- [Pipeline Module](docs/pipeline.md)
-- [Experiment Tracking](docs/experiments.md)
-- [Command-line Interface](docs/cli.md)
-- [Examples and Tutorials](docs/examples.md)
-- [API Reference](docs/api_reference.md)
-
-## Contributing
-
-Contributions are welcome! Please check out our [contribution guidelines](CONTRIBUTING.md).
+EZFlow works with data stored in the `data/` directory. This directory is included in `.gitignore` to prevent uploading datasets to GitHub. When using the framework, place your datasets in this directory, and they will be automatically used by the dataset classes.
 
 ## License
 
