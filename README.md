@@ -1,10 +1,6 @@
 # EZFlow: A Machine Learning Framework
 
 <p align="center">
-  <img src="docs/images/ezflow_logo.png" alt="EZFlow Logo" width="200"/>
-</p>
-
-<p align="center">
   <a href="https://github.com/Alcray/ezflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Alcray/ezflow.svg" alt="License"></a>
   <a href="https://github.com/Alcray/ezflow/stargazers"><img src="https://img.shields.io/github/stars/Alcray/ezflow.svg" alt="GitHub stars"></a>
 </p>
