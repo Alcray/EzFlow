@@ -50,8 +50,9 @@ setup(
         "optuna>=2.10.0",
         "hyperopt>=0.2.7",
         
-        # Experiment tracking
-        "mlflow>=1.14.0",
+        # Configuration
+        "hydra-core>=1.3.0",
+        "omegaconf>=2.3.0",
         
         # Deployment
         "flask>=2.0.0",

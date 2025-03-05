@@ -5,40 +5,41 @@ CLI entry point for the ezflow framework.
 
 import argparse
 import os
-import sys
 import logging
-from pathlib import Path
 import json
 from typing import Dict, Any
+import shutil
 
-from ezflow.utils.config import Config, load_config_from_file
-from ezflow.src.pipeline import Pipeline
-from ezflow.models.xgb_model import XGBoostModel
+from ezflow.models import get_model
+from ezflow.data.processors import preprocess_manifest, load_manifest, save_manifest
 
+# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("ezflow")
 
-def init_project(project_name):
-    """Initialize a new project with the ezflow structure."""
+def init_project(project_name: str):
+    """
+    Create basic project structure.
+    
+    Args:
+        project_name (str): Name of the project directory to create
+    """
     if os.path.exists(project_name):
         logger.error(f"Directory {project_name} already exists.")
         return False
-        
-    logger.info(f"Creating new project: {project_name}")
+    
+    logger.info(f"Creating project structure in: {project_name}")
+    
+    # Create basic directory structure
     project_dirs = [
         "",
         "data",
         "data/raw",
-        "data/interim",
         "data/processed",
         "models",
-        "src",
-        "notebooks",
-        "utils",
-        "deployment"
     ]
     
     for directory in project_dirs:
@@ -46,233 +47,125 @@ def init_project(project_name):
         os.makedirs(dir_path, exist_ok=True)
         logger.info(f"Created directory: {dir_path}")
     
-    # Create initial files
-    create_initial_files(project_name)
-    logger.info(f"Project {project_name} initialized successfully!")
+    # Create example manifest.jsonl
+    example_manifest = """{"feature1": 1.0, "feature2": "value", "target": 0}
+{"feature1": 2.0, "feature2": "other", "target": 1}"""
+    
+    with open(os.path.join(project_name, "data/raw/example_manifest.jsonl"), "w") as f:
+        f.write(example_manifest)
+    
+    # Create example preprocessing steps
+    example_steps = [
+        {"name": "drop_duplicates"},
+        {"name": "filter_by_value", "filters": {"feature1": 1.0}},
+        {"name": "split_manifest", "splits": {"train": 0.8, "val": 0.2}}
+    ]
+    
+    with open(os.path.join(project_name, "data/raw/preprocess_steps.json"), "w") as f:
+        json.dump(example_steps, f, indent=2)
+    
+    # Create .gitignore
+    gitignore_content = """# Data
+data/raw/*
+data/processed/*
+
+# Models
+models/*.pkl
+models/*.json
+models/*.png
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Keep examples
+!data/raw/example_manifest.jsonl
+!data/raw/preprocess_steps.json
+"""
+    
+    with open(os.path.join(project_name, ".gitignore"), "w") as f:
+        f.write(gitignore_content)
+    
+    logger.info(f"""
+Project initialized successfully!
+    
+To get started:
+1. Create your manifest.jsonl file in data/raw/
+   Example format is in data/raw/example_manifest.jsonl
+2. Modify preprocessing steps in data/raw/preprocess_steps.json
+3. Train your model:
+   ez train --model xgboost --manifest data/raw/manifest.jsonl
+""")
     return True
 
-def create_initial_files(project_name):
-    """Create initial template files for the project."""
-    # Create README.md
-    with open(os.path.join(project_name, "README.md"), "w") as f:
-        f.write(f"# {project_name}\n\n")
-        f.write("ML project created with ezflow framework.\n\n")
-        f.write("## Getting Started\n\n")
-        f.write("1. Place your data in the `data/raw` directory\n")
-        f.write("2. Run exploratory data analysis using notebooks\n")
-        f.write("3. Implement feature engineering in `src/feature_engineering.py`\n")
-        f.write("4. Train models using `python -m src.pipeline --train`\n")
+def train_model(model_type: str, manifest_path: str, preprocess_steps: str = None,
+                model_params: Dict = None, target_key: str = "target", 
+                output_path: str = None):
+    """Train a model using manifest data."""
+    if not os.path.exists(manifest_path):
+        logger.error(f"Manifest file not found: {manifest_path}")
+        return False
     
-    # Create basic pipeline.py
-    pipeline_content = '''import argparse
-import logging
+    # Load and preprocess manifest
+    try:
+        manifest = load_manifest(manifest_path)
+        
+        if preprocess_steps:
+            with open(preprocess_steps) as f:
+                steps = json.load(f)
+            manifest = preprocess_manifest(manifest, steps)
+    except Exception as e:
+        logger.error(f"Failed to process manifest: {str(e)}")
+        return False
+    
+    # Create and train model
+    try:
+        model = get_model(model_type, params=model_params or {}, target_key=target_key)
+        model.train(manifest)
+        logger.info("Training completed successfully!")
+        
+        # Save model if path provided
+        if output_path:
+            model.save(output_path)
+            logger.info(f"Model saved to {output_path}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Training failed: {str(e)}")
+        return False
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("pipeline")
-
-def run_pipeline(config):
-    """Run the full ML pipeline."""
-    logger.info("Starting pipeline...")
-    # TODO: Implement your pipeline logic here
-    logger.info("Pipeline completed!")
-
-def main():
-    parser = argparse.ArgumentParser(description="Run the ML pipeline")
-    parser.add_argument("--train", action="store_true", help="Train the model")
-    parser.add_argument("--predict", action="store_true", help="Make predictions")
-    parser.add_argument("--deploy", action="store_true", help="Deploy the model")
-    
-    args = parser.parse_args()
-    
-    # Simple config for now, can be replaced with config.py later
-    config = {"mode": "development"}
-    
-    if args.train:
-        run_pipeline(config)
-    elif args.predict:
-        logger.info("Prediction mode not implemented yet.")
-    elif args.deploy:
-        logger.info("Deployment mode not implemented yet.")
-    else:
-        parser.print_help()
-
-if __name__ == "__main__":
-    main()
-'''
-    
-    os.makedirs(os.path.join(project_name, "src"), exist_ok=True)
-    with open(os.path.join(project_name, "src", "pipeline.py"), "w") as f:
-        f.write(pipeline_content)
-    
-    # Create config.py
-    config_content = '''class Config:
-    """Configuration class for the project."""
-    
-    # Data paths
-    DATA_PATHS = {
-        "train": "data/raw/train.csv",
-        "test": "data/raw/test.csv"
-    }
-    
-    # Model parameters
-    MODEL_PARAMS = {
-        "n_estimators": 100,
-        "learning_rate": 0.1,
-        "max_depth": 5
-    }
-    
-    # Training parameters
-    TRAIN_PARAMS = {
-        "test_size": 0.2,
-        "random_state": 42
-    }
-    
-    # Evaluation metrics
-    METRICS = ["accuracy", "f1", "precision", "recall"]
-    
-    # Paths for saving models and results
-    SAVE_MODEL_PATH = "models/model.pkl"
-    RESULTS_PATH = "models/results.json"
-'''
-    
-    os.makedirs(os.path.join(project_name, "utils"), exist_ok=True)
-    with open(os.path.join(project_name, "utils", "config.py"), "w") as f:
-        f.write(config_content)
-
-    # Create __init__.py files to make directories importable
-    for dir_name in ["src", "utils", "models"]:
-        with open(os.path.join(project_name, dir_name, "__init__.py"), "w") as f:
-            f.write("# Make the directory a Python package\n")
-
-def train_model(config_path: str) -> None:
-    """Train a model using the specified configuration."""
-    # Load configuration
-    config = load_config_from_file(config_path)
-    
-    # Create model based on configuration
-    model_type = config.MODEL.get('type', 'xgb').lower()
-    if model_type == 'xgb':
-        model = XGBoostModel(config.MODEL.get('params', {}))
-    else:
-        raise ValueError(f"Unsupported model type: {model_type}")
-    
-    # Create and run pipeline
-    pipeline = Pipeline(config, model)
-    results = pipeline.run(save_results=True)
-    
-    logger.info("Training completed successfully!")
-    logger.info(f"Results: {results}")
-
-def predict(input_path: str, model_path: str, output_path: str) -> None:
+def predict(model_path: str, manifest_path: str, output_path: str):
     """Make predictions using a trained model."""
-    # Load the pipeline
-    pipeline = Pipeline.load_pipeline(model_path)
+    # Load model
+    try:
+        model_type = model_path.split('/')[-1].split('_')[0]  # e.g., "xgboost_model.pkl" -> "xgboost"
+        model = get_model(model_type)
+        model.load(model_path)
+    except Exception as e:
+        logger.error(f"Failed to load model: {str(e)}")
+        return False
     
     # Make predictions
-    predictions = pipeline.predict(input_path)
-    
-    # Save predictions
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    # Determine format based on file extension
-    if output_path.endswith('.csv'):
-        pd.DataFrame({'prediction': predictions}).to_csv(output_path, index=False)
-    elif output_path.endswith('.json'):
-        with open(output_path, 'w') as f:
-            json.dump({'predictions': predictions.tolist()}, f)
-    else:
-        np.save(output_path, predictions)
-    
-    logger.info(f"Predictions saved to {output_path}")
-
-def deploy_model(model_path: str, deploy_type: str) -> None:
-    """Deploy the model as an API or dashboard."""
-    if deploy_type == 'api':
-        try:
-            from flask import Flask, request, jsonify
-            import numpy as np
-            
-            app = Flask(__name__)
-            
-            # Load the pipeline
-            pipeline = Pipeline.load_pipeline(model_path)
-            
-            @app.route('/predict', methods=['POST'])
-            def predict():
-                try:
-                    # Get data from request
-                    data = request.get_json()
-                    
-                    # Convert to DataFrame
-                    df = pd.DataFrame(data['data'])
-                    
-                    # Make predictions
-                    predictions = pipeline.predict(df)
-                    
-                    return jsonify({
-                        'status': 'success',
-                        'predictions': predictions.tolist()
-                    })
-                except Exception as e:
-                    return jsonify({
-                        'status': 'error',
-                        'message': str(e)
-                    }), 400
-            
-            # Run the app
-            app.run(host='0.0.0.0', port=8000)
-            
-        except ImportError:
-            logger.error("Flask not installed. Install it with: pip install flask")
-            return
-            
-    elif deploy_type == 'dashboard':
-        try:
-            import streamlit as st
-            import pandas as pd
-            
-            # Load the pipeline
-            pipeline = Pipeline.load_pipeline(model_path)
-            
-            def run_dashboard():
-                st.title('ezflow Model Dashboard')
-                
-                # File upload
-                uploaded_file = st.file_uploader("Upload data for predictions", type=['csv'])
-                
-                if uploaded_file is not None:
-                    # Load and display data
-                    data = pd.read_csv(uploaded_file)
-                    st.write("Data Preview:", data.head())
-                    
-                    # Make predictions
-                    if st.button('Make Predictions'):
-                        predictions = pipeline.predict(data)
-                        
-                        # Display results
-                        results = pd.DataFrame({
-                            'Predictions': predictions
-                        })
-                        st.write("Predictions:", results)
-                        
-                        # Download predictions
-                        st.download_button(
-                            "Download Predictions",
-                            results.to_csv(index=False),
-                            "predictions.csv",
-                            "text/csv"
-                        )
-            
-            run_dashboard()
-            
-        except ImportError:
-            logger.error("Streamlit not installed. Install it with: pip install streamlit")
-            return
-    else:
-        logger.error(f"Unsupported deployment type: {deploy_type}")
+    try:
+        manifest = load_manifest(manifest_path)
+        predictions = model.predict(manifest)
+        
+        # Save predictions
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # Save as manifest
+        result_manifest = [{"prediction": p} for p in predictions]
+        save_manifest(result_manifest, output_path)
+        
+        logger.info(f"Predictions saved to {output_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Prediction failed: {str(e)}")
+        return False
 
 def main():
     """Main CLI function."""
@@ -287,33 +180,29 @@ def main():
     
     # Train command
     train_parser = subparsers.add_parser("train", help="Train a model")
-    train_parser.add_argument("--config", help="Path to config file", default="utils/config.py")
+    train_parser.add_argument("--model", required=True, help="Model type (e.g., xgboost)")
+    train_parser.add_argument("--manifest", required=True, help="Path to manifest.jsonl")
+    train_parser.add_argument("--preprocess", help="Path to preprocessing steps JSON")
+    train_parser.add_argument("--target-key", default="target", help="Key for target variable")
+    train_parser.add_argument("--output", help="Path to save model")
+    train_parser.add_argument("--params", type=json.loads, help="Model parameters as JSON string")
     
     # Predict command
     predict_parser = subparsers.add_parser("predict", help="Make predictions")
-    predict_parser.add_argument("--input", help="Path to input data", required=True)
-    predict_parser.add_argument("--model", help="Path to trained model", required=True)
-    predict_parser.add_argument("--output", help="Path to save predictions", required=True)
-    
-    # Deploy command
-    deploy_parser = subparsers.add_parser("deploy", help="Deploy model")
-    deploy_parser.add_argument("--model", help="Path to trained model", required=True)
-    deploy_parser.add_argument("--type", choices=["api", "dashboard"], default="api", 
-                              help="Type of deployment (api or dashboard)")
+    predict_parser.add_argument("--model", required=True, help="Path to trained model")
+    predict_parser.add_argument("--manifest", required=True, help="Path to manifest.jsonl")
+    predict_parser.add_argument("--output", required=True, help="Path to save predictions")
     
     args = parser.parse_args()
     
     if args.command == "init":
         init_project(args.project_name)
     elif args.command == "train":
-        logger.info(f"Training with config from {args.config}")
-        train_model(args.config)
+        output_path = args.output or f"models/{args.model}_model.pkl"
+        train_model(args.model, args.manifest, args.preprocess, 
+                   args.params, args.target_key, output_path)
     elif args.command == "predict":
-        logger.info(f"Predicting with model {args.model} on {args.input}")
-        predict(args.input, args.model, args.output)
-    elif args.command == "deploy":
-        logger.info(f"Deploying model {args.model} as {args.type}")
-        deploy_model(args.model, args.type)
+        predict(args.model, args.manifest, args.output)
     else:
         parser.print_help()
 

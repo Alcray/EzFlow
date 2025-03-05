@@ -4,9 +4,10 @@ XGBoost model implementation for the ezflow framework.
 
 import os
 import logging
+import json
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Union, Optional
+from typing import Dict, Any, Union, Optional, List
 import joblib
 import xgboost as xgb
 
@@ -16,26 +17,21 @@ logger = logging.getLogger(__name__)
 
 class XGBoostModel(BaseModel):
     """
-    XGBoost model implementation for the ezflow framework.
-    
-    This class provides a wrapper around the XGBoost model with
-    support for classification and regression.
+    XGBoost model for tabular data.
+    Handles data from manifest.jsonl where each key-value pair is treated as a feature,
+    except for the target key which is used as the label.
     """
     
-    def __init__(self, params: Dict[str, Any], model_type: str = 'classifier'):
+    def __init__(self, params: Dict[str, Any], target_key: str = "target"):
         """
-        Initialize the XGBoost model.
+        Initialize XGBoost model.
         
         Args:
-            params (Dict[str, Any]): XGBoost parameters.
-            model_type (str): Model type ('classifier' or 'regressor').
-            
-        Raises:
-            ValueError: If model_type is not 'classifier' or 'regressor'.
+            params (Dict[str, Any]): XGBoost parameters
+            target_key (str): Key in manifest.jsonl that contains the target value
         """
-        self.params = params
-        self.model_type = model_type.lower()
-        self.is_fitted = False
+        super().__init__(params)
+        self.target_key = target_key
         
         # Default parameters for XGBoost
         default_params = {
@@ -45,117 +41,134 @@ class XGBoostModel(BaseModel):
             'min_child_weight': 1,
             'subsample': 0.8,
             'colsample_bytree': 0.8,
-            'objective': 'binary:logistic' if self.model_type == 'classifier' else 'reg:squarederror',
+            'objective': 'binary:logistic',
             'random_state': 42
         }
         
         # Update default params with provided params
-        self.params = {**default_params, **self.params}
+        self.params = {**default_params, **params}
         
         # Initialize model
-        if self.model_type == 'classifier':
-            self.model = xgb.XGBClassifier(**self.params)
-        elif self.model_type == 'regressor':
-            self.model = xgb.XGBRegressor(**self.params)
-        else:
-            raise ValueError(f"Invalid model_type: {model_type}. Must be 'classifier' or 'regressor'")
-        
-        logger.info(f"Initialized XGBoostModel of type {self.model_type}")
+        self.model = xgb.XGBClassifier(**self.params)
+        self.feature_names = None
     
-    def train(self, X: Union[np.ndarray, pd.DataFrame], y: Union[np.ndarray, pd.Series],
-              eval_set: Optional[list] = None, early_stopping_rounds: Optional[int] = None) -> None:
+    def load_data(self, manifest_path: str) -> tuple:
         """
-        Train the XGBoost model.
+        Load and prepare data from manifest.jsonl.
         
         Args:
-            X (Union[np.ndarray, pd.DataFrame]): Features.
-            y (Union[np.ndarray, pd.Series]): Target values.
-            eval_set (Optional[list]): Validation set for early stopping.
-            early_stopping_rounds (Optional[int]): Number of rounds for early stopping.
-        """
-        logger.info("Training XGBoost model...")
-        
-        # Convert to numpy if needed
-        if isinstance(X, pd.DataFrame):
-            feature_names = X.columns.tolist()
-            X = X.values
-        else:
-            feature_names = None
-        
-        if isinstance(y, pd.Series):
-            y = y.values
-        
-        # Set feature names if available
-        if feature_names:
-            self.model.feature_names = feature_names
-        
-        # Train the model
-        fit_params = {}
-        
-        if eval_set is not None:
-            fit_params['eval_set'] = eval_set
-        
-        if early_stopping_rounds is not None:
-            fit_params['early_stopping_rounds'] = early_stopping_rounds
-        
-        self.model.fit(X, y, **fit_params)
-        self.is_fitted = True
-        
-        logger.info(f"XGBoost model trained successfully with {self.model.n_estimators} trees")
-    
-    def predict(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
-        """
-        Make predictions with the XGBoost model.
-        
-        Args:
-            X (Union[np.ndarray, pd.DataFrame]): Features.
+            manifest_path (str): Path to manifest.jsonl file
             
         Returns:
-            np.ndarray: Predictions.
+            tuple: (X, y) where X is features DataFrame and y is target Series
+        """
+        # Read manifest file
+        data = []
+        with open(manifest_path, 'r') as f:
+            for line in f:
+                data.append(json.loads(line))
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(data)
+        
+        # Separate features and target
+        if self.target_key not in df.columns:
+            raise ValueError(f"Target key '{self.target_key}' not found in manifest")
+        
+        y = df[self.target_key]
+        X = df.drop(columns=[self.target_key])
+        
+        # Store feature names
+        self.feature_names = X.columns.tolist()
+        
+        return X, y
+    
+    def train(self, manifest_path: str, eval_manifest: Optional[str] = None) -> None:
+        """
+        Train the model on data from manifest file.
+        
+        Args:
+            manifest_path (str): Path to training manifest.jsonl
+            eval_manifest (Optional[str]): Path to evaluation manifest.jsonl
+        """
+        logger.info("Loading training data...")
+        X_train, y_train = self.load_data(manifest_path)
+        
+        eval_set = None
+        if eval_manifest:
+            logger.info("Loading evaluation data...")
+            X_eval, y_eval = self.load_data(eval_manifest)
+            eval_set = [(X_eval, y_eval)]
+        
+        logger.info("Training XGBoost model...")
+        self.model.fit(
+            X_train, y_train,
+            eval_set=eval_set,
+            early_stopping_rounds=10 if eval_set else None,
+            verbose=True
+        )
+        
+        self.is_fitted = True
+        logger.info("Training completed")
+    
+    def predict(self, manifest_path: str) -> np.ndarray:
+        """
+        Make predictions on new data.
+        
+        Args:
+            manifest_path (str): Path to manifest.jsonl with features
             
-        Raises:
-            ValueError: If the model is not trained.
+        Returns:
+            np.ndarray: Predictions
         """
         if not self.is_fitted:
             raise ValueError("Model is not trained. Call train() first")
         
-        # Convert to numpy if needed
-        if isinstance(X, pd.DataFrame):
-            X = X.values
+        # Load and prepare data
+        X, _ = self.load_data(manifest_path)
+        
+        # Ensure all feature columns are present
+        missing_features = set(self.feature_names) - set(X.columns)
+        if missing_features:
+            raise ValueError(f"Missing features in prediction data: {missing_features}")
+        
+        # Reorder columns to match training data
+        X = X[self.feature_names]
         
         return self.model.predict(X)
     
-    def predict_proba(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+    def predict_proba(self, manifest_path: str) -> np.ndarray:
         """
-        Make probability predictions with the XGBoost classifier.
+        Make probability predictions.
         
         Args:
-            X (Union[np.ndarray, pd.DataFrame]): Features.
+            manifest_path (str): Path to manifest.jsonl with features
             
         Returns:
-            np.ndarray: Probability predictions.
-            
-        Raises:
-            ValueError: If the model is not trained or not a classifier.
+            np.ndarray: Probability predictions
         """
         if not self.is_fitted:
             raise ValueError("Model is not trained. Call train() first")
         
-        if self.model_type != 'classifier':
-            raise ValueError("predict_proba is only available for classifiers")
+        # Load and prepare data
+        X, _ = self.load_data(manifest_path)
         
-        # Convert to numpy if needed
-        if isinstance(X, pd.DataFrame):
-            X = X.values
+        # Ensure all feature columns are present
+        missing_features = set(self.feature_names) - set(X.columns)
+        if missing_features:
+            raise ValueError(f"Missing features in prediction data: {missing_features}")
+        
+        # Reorder columns to match training data
+        X = X[self.feature_names]
         
         return self.model.predict_proba(X)
     
     def save(self, path: str) -> None:
         """
-        Save the XGBoost model to disk.
+        Save the model to disk.
         
         Args:
-            path (str): Path to save the model.
+            path (str): Path to save the model
         """
         if not self.is_fitted:
             logger.warning("Saving an untrained model")
@@ -163,64 +176,58 @@ class XGBoostModel(BaseModel):
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(path), exist_ok=True)
         
-        # Save model
-        joblib.dump(self, path)
-        logger.info(f"XGBoost model saved to {path}")
+        # Save model and metadata
+        model_data = {
+            'model': self.model,
+            'params': self.params,
+            'feature_names': self.feature_names,
+            'target_key': self.target_key,
+            'is_fitted': self.is_fitted
+        }
+        joblib.dump(model_data, path)
+        logger.info(f"Model saved to {path}")
     
     def load(self, path: str) -> None:
         """
-        Load the XGBoost model from disk.
+        Load the model from disk.
         
         Args:
-            path (str): Path to load the model from.
-            
-        Raises:
-            FileNotFoundError: If the model file doesn't exist.
-            ValueError: If the loaded object is not an XGBoostModel.
+            path (str): Path to load the model from
         """
         if not os.path.exists(path):
             raise FileNotFoundError(f"Model file not found: {path}")
         
-        # Load model
-        loaded_model = joblib.load(path)
+        # Load model and metadata
+        model_data = joblib.load(path)
         
-        if not isinstance(loaded_model, XGBoostModel):
-            raise ValueError(f"Loaded object is not an XGBoostModel")
+        self.model = model_data['model']
+        self.params = model_data['params']
+        self.feature_names = model_data['feature_names']
+        self.target_key = model_data['target_key']
+        self.is_fitted = model_data['is_fitted']
         
-        # Update attributes
-        self.model = loaded_model.model
-        self.params = loaded_model.params
-        self.model_type = loaded_model.model_type
-        self.is_fitted = loaded_model.is_fitted
-        
-        logger.info(f"XGBoost model loaded from {path}")
+        logger.info(f"Model loaded from {path}")
     
     def feature_importance(self) -> pd.DataFrame:
         """
-        Get feature importances from the XGBoost model.
+        Get feature importances.
         
         Returns:
-            pd.DataFrame: Feature importances sorted by importance.
-            
-        Raises:
-            ValueError: If the model is not trained.
+            pd.DataFrame: Feature importances sorted by importance
         """
         if not self.is_fitted:
             raise ValueError("Model is not trained. Call train() first")
         
         # Get feature importances
-        feature_importance = self.model.feature_importances_
+        importance = self.model.feature_importances_
         
-        # Get feature names
-        feature_names = getattr(self.model, 'feature_names', None)
-        if feature_names is None:
-            feature_names = [f"feature_{i}" for i in range(len(feature_importance))]
-        
-        # Create DataFrame and sort by importance
+        # Create DataFrame
         importance_df = pd.DataFrame({
-            'Feature': feature_names,
-            'Importance': feature_importance
+            'Feature': self.feature_names,
+            'Importance': importance
         })
+        
+        # Sort by importance
         importance_df = importance_df.sort_values('Importance', ascending=False).reset_index(drop=True)
         
         return importance_df 
