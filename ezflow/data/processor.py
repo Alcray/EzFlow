@@ -147,20 +147,38 @@ class SplitManifest(Processor):
         largest_split = max(result.items(), key=lambda x: len(x[1]))[1]
         return largest_split
 
-def save_manifest(manifest: List[Dict[str, Any]], output_path: str) -> None:
-    """Save manifest to JSONL file."""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, 'w') as f:
-        for entry in manifest:
-            f.write(json.dumps(entry) + '\n')
-
-def load_manifest(filepath: str) -> List[Dict[str, Any]]:
-    """Load manifest from JSONL file."""
-    manifest = []
-    with open(filepath) as f:
+def load_manifest(manifest_path: str) -> List[Dict[str, Any]]:
+    """
+    Load manifest from a JSONL file.
+    
+    Args:
+        manifest_path (str): Path to manifest.jsonl file
+        
+    Returns:
+        List[Dict[str, Any]]: List of manifest entries
+    """
+    data = []
+    with open(manifest_path, 'r') as f:
         for line in f:
-            manifest.append(json.loads(line.strip()))
-    return manifest
+            data.append(json.loads(line))
+    return data
+
+def save_manifest(manifest: List[Dict[str, Any]], output_path: str) -> None:
+    """
+    Save manifest to a JSONL file.
+    
+    Args:
+        manifest (List[Dict[str, Any]]): List of manifest entries
+        output_path (str): Path to save manifest.jsonl
+    """
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    with open(output_path, 'w') as f:
+        for item in manifest:
+            f.write(json.dumps(item) + '\n')
+    
+    logger.info(f"Manifest saved to {output_path}")
 
 class DataProcessor:
     """Main data processing class."""

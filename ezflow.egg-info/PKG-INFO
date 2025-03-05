@@ -1,0 +1,215 @@
+Metadata-Version: 2.2
+Name: ezflow
+Version: 0.1.0
+Summary: A lightweight, extensible machine learning framework for hackathons
+Home-page: https://github.com/Alcray/ezflow
+Author: Alex Hayrapetyan
+Author-email: hayrapetyan.alexan@gmail.com
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: scikit-learn>=1.0.0
+Requires-Dist: xgboost>=1.5.0
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: seaborn>=0.11.0
+Requires-Dist: optuna>=2.10.0
+Requires-Dist: hyperopt>=0.2.7
+Requires-Dist: hydra-core>=1.3.0
+Requires-Dist: omegaconf>=2.3.0
+Requires-Dist: flask>=2.0.0
+Requires-Dist: streamlit>=1.10.0
+Requires-Dist: uvicorn>=0.13.0
+Requires-Dist: joblib>=1.1.0
+Requires-Dist: pyyaml>=5.4.0
+Requires-Dist: tqdm>=4.50.0
+Requires-Dist: python-dotenv>=0.19.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0.0; extra == "dev"
+Requires-Dist: black>=21.5b0; extra == "dev"
+Requires-Dist: flake8>=3.9.0; extra == "dev"
+Requires-Dist: isort>=5.8.0; extra == "dev"
+Requires-Dist: mypy>=0.812; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=4.0.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=0.5.0; extra == "docs"
+Provides-Extra: api
+Requires-Dist: flask>=2.0.0; extra == "api"
+Provides-Extra: dashboard
+Requires-Dist: streamlit>=1.10.0; extra == "dashboard"
+Provides-Extra: all
+Requires-Dist: optuna>=2.10.0; extra == "all"
+Requires-Dist: hyperopt>=0.2.7; extra == "all"
+Requires-Dist: flask>=2.0.0; extra == "all"
+Requires-Dist: streamlit>=1.10.0; extra == "all"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# 🚀 ezflow: Machine Learning Framework for Hackathons
+
+A lightweight machine learning framework that uses manifest-based approach for data handling. The framework focuses on simplicity and modularity, making it easy to extend for different types of data and models.
+
+## 🛠️ Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Alcray/ezflow.git
+cd ezflow
+
+# Install in development mode
+pip install -e .
+```
+
+## Quick Start
+
+### 1. Initialize Project
+```bash
+# Create new project
+ez init my_project
+cd my_project
+```
+
+### 2. Prepare Your Data
+You have two options:
+
+a) Create a manifest file directly (`data/raw/manifest.jsonl`):
+```jsonl
+{"feature1": 1.0, "feature2": "value", "target": 0}
+{"feature1": 2.0, "feature2": "other", "target": 1}
+```
+
+b) Convert CSV using preprocessing config (`data/raw/preprocess.yaml`):
+
+
+
+### 3. Train Model
+```bash
+# Basic training
+ez train \
+  --model xgboost \
+  --manifest data/raw/manifest.jsonl \
+  --output models/model.pkl
+
+# With custom parameters
+ez train \
+  --model xgboost \
+  --manifest data/raw/manifest.jsonl \
+  --params '{"n_estimators": 200, "learning_rate": 0.05}' \
+  --output models/model.pkl
+```
+
+### 4. Make Predictions
+```bash
+ez predict \
+  --model models/model.pkl \
+  --manifest data/test_manifest.jsonl \
+  --output predictions.jsonl
+```
+
+## Example End-to-End Pipeline
+
+Here's a complete example using the Iris dataset:
+
+```bash
+# Create project
+ez init iris_project
+cd iris_project
+
+# Download Iris dataset
+python -c "
+from sklearn.datasets import load_iris
+import pandas as pd
+iris = load_iris()
+df = pd.DataFrame(iris.data, columns=iris.feature_names)
+df['target'] = iris.target
+df.to_csv('data/raw/iris.csv', index=False)
+"
+
+# Create preprocessing config
+cat > data/raw/preprocess.yaml << EOL
+workspace_dir: data
+input_file: data/raw/iris.csv
+target_column: target
+
+processors:
+  # Create manifest
+  - _target_: CreateManifestFromCSV
+    input_file: \${input_file}
+    key_mapping:
+      target: \${target_column}
+
+  # Add feature interactions
+  - _target_: AddComputedFields
+    computations:
+      - key: "petal_ratio"
+        operation: "ratio"
+        input_keys: ["petal length (cm)", "petal width (cm)"]
+      - key: "sepal_ratio"
+        operation: "ratio"
+        input_keys: ["sepal length (cm)", "sepal width (cm)"]
+
+  # Split data
+  - _target_: SplitManifest
+    splits:
+      train: 0.8
+      val: 0.2
+    shuffle: true
+    seed: 42
+    output_files:
+      train: \${workspace_dir}/train_manifest.jsonl
+      val: \${workspace_dir}/val_manifest.jsonl
+EOL
+
+# Process data
+python -c "
+from ezflow.data.processor import process_data
+process_data('data/raw/preprocess.yaml')
+"
+
+# Train model
+ez train \
+  --model xgboost \
+  --manifest data/train_manifest.jsonl \
+  --params '{
+    "n_estimators": 100,
+    "max_depth": 3,
+    "learning_rate": 0.1
+  }' \
+  --output models/iris_model.pkl
+
+# Make predictions
+ez predict \
+  --model models/iris_model.pkl \
+  --manifest data/val_manifest.jsonl \
+  --output predictions.jsonl
+
+# View results
+python -c "
+import json
+with open('predictions.jsonl') as f:
+    preds = [json.loads(line)['prediction'] for line in f]
+print(f'Predictions: {preds[:5]}')
+"
+```
+
+## 📁 Project Structure
+
+```

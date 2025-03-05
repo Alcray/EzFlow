@@ -1,0 +1,20 @@
+# Data
+data/raw/*
+data/processed/*
+
+# Models
+models/*.pkl
+models/*.json
+models/*.png
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Keep examples
+!data/raw/example_manifest.jsonl
+!data/raw/preprocess_steps.json

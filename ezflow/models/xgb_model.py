@@ -101,12 +101,21 @@ class XGBoostModel(BaseModel):
             eval_set = [(X_eval, y_eval)]
         
         logger.info("Training XGBoost model...")
-        self.model.fit(
-            X_train, y_train,
-            eval_set=eval_set,
-            early_stopping_rounds=10 if eval_set else None,
-            verbose=True
-        )
+        
+        # Check if we need to modify the objective based on the target data
+        if len(np.unique(y_train)) > 2:
+            # For multiclass classification
+            self.params['objective'] = 'multi:softprob'
+            self.params['num_class'] = len(np.unique(y_train))
+            
+        # Reinitialize the model with updated params
+        self.model = xgb.XGBClassifier(**self.params)
+        
+        # Fit the model
+        if eval_set:
+            self.model.fit(X_train, y_train, eval_set=eval_set, verbose=True)
+        else:
+            self.model.fit(X_train, y_train)
         
         self.is_fitted = True
         logger.info("Training completed")
