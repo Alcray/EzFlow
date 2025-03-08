@@ -1,0 +1,70 @@
+documentation: |
+  Tabular Data Processing
+  ######################
+  
+  This config can be used to prepare tabular data in the ezflowx format.
+  It processes the data through several steps to create a clean manifest
+  ready for model training.
+
+  This config performs the following data processing:
+  1. Creates initial manifest from CSV file
+  2. Drops duplicate entries
+  3. Filters data based on conditions
+  4. Splits data into train/val sets
+
+  **Required arguments**:
+  * **workspace_dir**: Directory where processed files will be stored
+  * **input_file**: Path to input CSV file
+  * **target_column**: Name of the target column
+
+  **Output format**:
+  This config generates output manifest files:
+  * ``${workspace_dir}/train_manifest.jsonl`` - Training data
+  * ``${workspace_dir}/val_manifest.jsonl`` - Validation data
+
+  Each manifest entry contains:
+  * Feature columns from original data
+  * target: Target variable
+
+processors_to_run: all
+workspace_dir: ???
+input_file: ???
+target_column: "target"
+final_manifest: ${workspace_dir}/processed/manifest.jsonl
+
+processors:
+  # Create initial manifest from CSV
+  - _target_: CreateManifestFromCSV
+    input_file: ${input_file}
+    key_mapping:
+      target: ${target_column}
+
+  # Drop duplicates
+  - _target_: DropDuplicates
+    keys: null  # use all columns
+
+  # Filter data
+  - _target_: FilterByValue
+    filters:
+      target: [0, 1]  # only keep binary targets
+
+  # Add computed features
+  - _target_: AddComputedFields
+    computations:
+      - key: "feature_sum"
+        operation: "sum"
+        input_keys: ["feature1", "feature2"]
+      - key: "feature_ratio"
+        operation: "ratio"
+        input_keys: ["feature1", "feature2"]
+
+  # Split data
+  - _target_: SplitManifest
+    splits:
+      train: 0.8
+      val: 0.2
+    shuffle: true
+    seed: 42
+    output_files:
+      train: ${workspace_dir}/train_manifest.jsonl
+      val: ${workspace_dir}/val_manifest.jsonl 

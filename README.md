@@ -1,48 +1,82 @@
-# bio_ml_handler
+# 🚀 ezflowx: Machine Learning Framework for Hackathons
 
-A data handler for bioinformatics machine learning tasks, including data loading, processing, and model handling.
+### Install from Source
 
-## Installation
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/ezflowx.git
+cd ezflowx
 
-1. Clone the repository:
+# Install in development mode
+pip install -e .
+```
 
-   ```bash
-   git clone https://github.com/yourusername/bio_ml_handler.git
-   cd bio_ml_handler
-   ```
 
-2. Install the package with pip:
+### Using in Google Colab or Jupyter Notebooks
 
-   ```bash
-   pip install .
-   ```
-
-Or, install directly from GitHub:
-
-   ```bash
-   pip install git+https://github.com/Alcray/BioML.git
-   ```
-
-## Usage
+You can use ezflowx directly in notebook environments without project initialization:
 
 ```python
-from bio_ml_handler import BioMLDataHandler
-# Initialize handler with paths to data folders
-handler = BioMLDataHandler(data_path='data', split_data_path='split_data')
+# Import key components
+from ezflowx.models import ModelFactory
 
-# Prepare data in fingerprint format (for model training and evaluation)
-handler.prepare_train_data(representation='fingerprint')
-handler.prepare_validation_data(representation='fingerprint')
-handler.prepare_test_data(representation='fingerprint')
+# Create a model
+model = ModelFactory.create('xgboost', problem_type='classification')
 
-# Train and evaluate the model
-handler.train_model()
-print("Model Average Precision Score:", handler.evaluate_model())
+# Train on your data (DataFrame format)
+model.train(X_train, y_train)
 
-# Export train_split data to JSONL format with SMILES representation
-handler.export_to_jsonl(handler.train_split, 'train_split.jsonl')
+# Evaluate performance
+metrics = model.evaluate(X_test, y_test, is_classification=True)
+print(f"Metrics: {metrics}")
 
-# Generate submission file
-handler.generate_submission('submission.csv')
+# Make predictions
+predictions = model.predict(X_test)
+
+# Save model for later use
+model.save("my_model.pkl")
 ```
----
+
+### Experiment Tracking
+
+ezflowx includes built-in experiment tracking capabilities powered by MLflow. This lets you track metrics, parameters, and artifacts across multiple runs:
+
+```python
+from ezflowx.models import ModelFactory
+
+# Create your model
+model = ModelFactory.create('xgboost', problem_type='classification')
+
+# Start tracking run with an experiment name
+model.start_run(experiment_name="my_classification_experiment")
+
+# Train the model - metrics will be automatically logged
+model.train(X_train, y_train)
+
+# Log evaluation metrics
+metrics = model.evaluate(X_test, y_test, is_classification=True)
+
+# Perform cross-validation with automatic metric logging
+cv_results = model.cross_validate(X, y, cv=5, is_classification=True)
+print(f"Cross-validation results: {cv_results}")
+
+# Hyperparameter optimization with tracking
+param_space = model.get_param_search_space('xgboost')
+best_params = model.search_hyperparams(
+    X_train, y_train, 
+    param_space=param_space,
+    n_trials=20,
+    cv=3
+)
+print(f"Best parameters: {best_params}")
+
+# End the tracking run
+model.end_run()
+
+# The results will be available in your MLflow UI
+# Run `mlflow ui` in your terminal to view experiments
+```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
