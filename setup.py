@@ -16,11 +16,6 @@ setup(
     url="https://github.com/Alcray/ezflow",
     packages=find_packages(),
     include_package_data=True,
-    entry_points={
-        "console_scripts": [
-            "ez=ezflow.main:main",
-        ],
-    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -48,21 +43,11 @@ setup(
         
         # Hyperparameter tuning
         "optuna>=2.10.0",
-        "hyperopt>=0.2.7",
-        
-        # Configuration
-        "hydra-core>=1.3.0",
-        "omegaconf>=2.3.0",
-        
-        # Deployment
-        "flask>=2.0.0",
-        "streamlit>=1.10.0",
-        "uvicorn>=0.13.0",
         
         # Utilities
         "joblib>=1.1.0",
         "pyyaml>=5.4.0",
-        "tqdm>=4.50.0",
+        "tqdm>=4.62.0",
         "python-dotenv>=0.19.0",
     ],
     extras_require={
@@ -77,37 +62,21 @@ setup(
             "sphinx>=4.0.0",
             "sphinx-rtd-theme>=0.5.0",
         ],
-        'api': ["flask>=2.0.0"],
-        'dashboard': ["streamlit>=1.10.0"],
-        'all': [
+        "tracking": [
+            "mlflow>=1.25.0",
+        ],
+        "api": [
+            "flask>=2.0.0"
+        ],
+        "dashboard": [
+            "streamlit>=1.10.0"
+        ],
+        "all": [
             "optuna>=2.10.0",
             "hyperopt>=0.2.7",
+            "mlflow>=1.25.0",
             "flask>=2.0.0",
             "streamlit>=1.10.0",
         ],
     },
 )
-
-# Create directory structure if not exists
-def create_dir_structure():
-    """Create the directory structure for a new ezflow project."""
-    dirs = [
-        "ezflow",
-        "ezflow/data",
-        "ezflow/data/raw",
-        "ezflow/data/interim",
-        "ezflow/data/processed",
-        "ezflow/models",
-        "ezflow/src",
-        "ezflow/utils",
-        "ezflow/notebooks",
-        "ezflow/deployment",
-    ]
-    
-    for directory in dirs:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-            print(f"Created directory: {directory}")
-
-# Uncomment to create the directory structure
-# create_dir_structure()

@@ -1,55 +1,80 @@
 # 🚀 ezflow: Machine Learning Framework for Hackathons
 
-ezflow is a flexible and easy-to-use machine learning framework designed for hackathons. It allows data scientists to focus on data preparation and feature engineering, while automating model training, hyperparameter optimization, and evaluation.
+### Install from Source
 
-# typical workflow
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/ezflow.git
+cd ezflow
+
+# Install in development mode
+pip install -e .
+```
+
+
+### Using in Google Colab or Jupyter Notebooks
+
+You can use ezflow directly in notebook environments without project initialization:
+
+```python
+# Import key components
+from ezflow.models import ModelFactory
+
+# Create a model
+model = ModelFactory.create('xgboost', problem_type='classification')
+
+# Train on your data (DataFrame format)
+model.train(X_train, y_train)
+
+# Evaluate performance
+metrics = model.evaluate(X_test, y_test, is_classification=True)
+print(f"Metrics: {metrics}")
+
+# Make predictions
+predictions = model.predict(X_test)
+
+# Save model for later use
+model.save("my_model.pkl")
+```
+
+### Experiment Tracking
+
+ezflow includes built-in experiment tracking capabilities powered by MLflow. This lets you track metrics, parameters, and artifacts across multiple runs:
+
 ```python
 from ezflow.models import ModelFactory
 
-# Register models (run once at startup, usually at application initialization)
-ModelFactory.register_from_module('ezflow.models')
+# Create your model
+model = ModelFactory.create('xgboost', problem_type='classification')
 
-# Step 1: Instantiate model via ModelFactory
-model = ModelFactory.create(
-    model_type='xgboost',                 # model type name from registry
-    problem_type='classification',        # classification or regression
-    params={"max_depth": 5}               # initial parameters
-)
+# Start tracking run with an experiment name
+model.start_run(experiment_name="my_classification_experiment")
 
-# Step 2: Start experiment tracking (MLflow, optional)
-model.start_run(experiment_name="xgb_classification")
-
-# Step 3: Train the model
+# Train the model - metrics will be automatically logged
 model.train(X_train, y_train)
 
-# Step 4: Evaluate performance
-eval_metrics = model.evaluate(X_test, y_test, is_classification=True)
-print(f"Evaluation metrics: {eval_metrics}")
+# Log evaluation metrics
+metrics = model.evaluate(X_test, y_test, is_classification=True)
 
-# Step 5: Plot training history (e.g., accuracy over time)
-model.plot_training_history(metric='accuracy', save_path='accuracy_plot.png')
+# Perform cross-validation with automatic metric logging
+cv_results = model.cross_validate(X, y, cv=5, is_classification=True)
+print(f"Cross-validation results: {cv_results}")
 
-# Step 6: Hyperparameter tuning with Optuna (optional)
+# Hyperparameter optimization with tracking
+param_space = model.get_param_search_space('xgboost')
 best_params = model.search_hyperparams(
-    X_train, y_train,
-    param_space={'max_depth': ('int', 3, 10)},
-    n_trials=10,
-    cv=3,
-    is_classification=True,
-    metric='accuracy'
+    X_train, y_train, 
+    param_space=param_space,
+    n_trials=20,
+    cv=3
 )
+print(f"Best parameters: {best_params}")
 
-print(f"Best hyperparameters found: {best_params}")
-
-# Step 7: Re-train with best hyperparameters (optional)
-model.set_params(best_params)
-model.train(X_train, y_train)
-
-# Step 8: Save the final trained model to disk
-model.save("model.joblib")
-
-# Step 9: End experiment tracking
+# End the tracking run
 model.end_run()
+
+# The results will be available in your MLflow UI
+# Run `mlflow ui` in your terminal to view experiments
 ```
 
 ## License
