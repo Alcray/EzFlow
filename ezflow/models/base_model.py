@@ -1,5 +1,5 @@
 """
-Base model interface for the ezflow framework.
+Base model interface for the ezflowx framework.
 
 This module defines the base interface for all models in the framework.
 """
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class BaseModel(ABC):
     """
-    Abstract base class for all models in the ezflow framework.
+    Abstract base class for all models in the ezflowx framework.
     
     All model implementations should inherit from this class and implement
     its abstract methods.

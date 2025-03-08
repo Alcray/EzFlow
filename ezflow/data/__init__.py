@@ -1,8 +1,8 @@
 """
-Data utilities for ezflow, focused on JSONL manifest files.
+Data utilities for ezflowx, focused on JSONL manifest files.
 """
 
-from ezflow.data.utils import (
+from ezflowx.data.utils import (
     load_manifest,
     save_manifest,
     load_for_training,

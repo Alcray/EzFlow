@@ -1,5 +1,5 @@
 """
-ModelFactory for the ezflow framework.
+ModelFactory for the ezflowx framework.
 
 This module provides a robust factory for creating model instances.
 """
@@ -8,7 +8,7 @@ import logging
 import importlib
 from typing import Dict, Any, Type, List, Optional, Union, Callable
 
-from ezflow.models.base_model import BaseModel
+from ezflowx.models.base_model import BaseModel
 
 logger = logging.getLogger(__name__)
 

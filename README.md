@@ -1,11 +1,11 @@
-# 🚀 ezflow: Machine Learning Framework for Hackathons
+# 🚀 ezflowx: Machine Learning Framework for Hackathons
 
 ### Install from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ezflow.git
-cd ezflow
+git clone https://github.com/yourusername/ezflowx.git
+cd ezflowx
 
 # Install in development mode
 pip install -e .
@@ -14,11 +14,11 @@ pip install -e .
 
 ### Using in Google Colab or Jupyter Notebooks
 
-You can use ezflow directly in notebook environments without project initialization:
+You can use ezflowx directly in notebook environments without project initialization:
 
 ```python
 # Import key components
-from ezflow.models import ModelFactory
+from ezflowx.models import ModelFactory
 
 # Create a model
 model = ModelFactory.create('xgboost', problem_type='classification')
@@ -39,10 +39,10 @@ model.save("my_model.pkl")
 
 ### Experiment Tracking
 
-ezflow includes built-in experiment tracking capabilities powered by MLflow. This lets you track metrics, parameters, and artifacts across multiple runs:
+ezflowx includes built-in experiment tracking capabilities powered by MLflow. This lets you track metrics, parameters, and artifacts across multiple runs:
 
 ```python
-from ezflow.models import ModelFactory
+from ezflowx.models import ModelFactory
 
 # Create your model
 model = ModelFactory.create('xgboost', problem_type='classification')

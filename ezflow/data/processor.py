@@ -1,5 +1,5 @@
 """
-Data preprocessing module for ezflow.
+Data preprocessing module for ezflowx.
 
 This module provides a configurable data processing pipeline using YAML configs.
 """

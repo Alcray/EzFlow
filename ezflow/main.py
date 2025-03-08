@@ -12,8 +12,8 @@ logging.basicConfig(
 )
 
 # Import core components to make them available via the main module
-from ezflow.models import ModelFactory
-from ezflow.models.base_model import BaseModel
+from ezflowx.models import ModelFactory
+from ezflowx.models.base_model import BaseModel
 
 # Make key classes and functions available at the top level
 __all__ = ['ModelFactory', 'BaseModel']

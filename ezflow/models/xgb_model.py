@@ -1,5 +1,5 @@
 """
-XGBoost model implementation for the ezflow framework.
+XGBoost model implementation for the ezflowx framework.
 """
 
 import os
@@ -12,7 +12,7 @@ import joblib
 import xgboost as xgb
 import matplotlib.pyplot as plt
 
-from ezflow.models.base_model import BaseModel
+from ezflowx.models.base_model import BaseModel
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ documentation: |
   Tabular Data Processing
   ######################
   
-  This config can be used to prepare tabular data in the ezflow format.
+  This config can be used to prepare tabular data in the ezflowx format.
   It processes the data through several steps to create a clean manifest
   ready for model training.
 

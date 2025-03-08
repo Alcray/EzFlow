@@ -6,14 +6,14 @@ with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name="ezflow",
+    name="ezflowx",
     version="0.1.0",
     description="A lightweight, extensible machine learning framework for hackathons",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Alex Hayrapetyan",
     author_email="hayrapetyan.alexan@gmail.com",
-    url="https://github.com/Alcray/ezflow",
+    url="https://github.com/Alcray/ezflowx",
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
