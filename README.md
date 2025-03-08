@@ -1,150 +1,57 @@
 # 🚀 ezflow: Machine Learning Framework for Hackathons
 
-A lightweight machine learning framework that uses manifest-based approach for data handling. The framework focuses on simplicity and modularity, making it easy to extend for different types of data and models.
+ezflow is a flexible and easy-to-use machine learning framework designed for hackathons. It allows data scientists to focus on data preparation and feature engineering, while automating model training, hyperparameter optimization, and evaluation.
 
-## 🛠️ Installation
+# typical workflow
+```python
+from ezflow.models import ModelFactory
 
-```bash
-# Clone the repository
-git clone https://github.com/Alcray/ezflow.git
-cd ezflow
+# Register models (run once at startup, usually at application initialization)
+ModelFactory.register_from_module('ezflow.models')
 
-# Install in development mode
-pip install -e .
+# Step 1: Instantiate model via ModelFactory
+model = ModelFactory.create(
+    model_type='xgboost',                 # model type name from registry
+    problem_type='classification',        # classification or regression
+    params={"max_depth": 5}               # initial parameters
+)
+
+# Step 2: Start experiment tracking (MLflow, optional)
+model.start_run(experiment_name="xgb_classification")
+
+# Step 3: Train the model
+model.train(X_train, y_train)
+
+# Step 4: Evaluate performance
+eval_metrics = model.evaluate(X_test, y_test, is_classification=True)
+print(f"Evaluation metrics: {eval_metrics}")
+
+# Step 5: Plot training history (e.g., accuracy over time)
+model.plot_training_history(metric='accuracy', save_path='accuracy_plot.png')
+
+# Step 6: Hyperparameter tuning with Optuna (optional)
+best_params = model.search_hyperparams(
+    X_train, y_train,
+    param_space={'max_depth': ('int', 3, 10)},
+    n_trials=10,
+    cv=3,
+    is_classification=True,
+    metric='accuracy'
+)
+
+print(f"Best hyperparameters found: {best_params}")
+
+# Step 7: Re-train with best hyperparameters (optional)
+model.set_params(best_params)
+model.train(X_train, y_train)
+
+# Step 8: Save the final trained model to disk
+model.save("model.joblib")
+
+# Step 9: End experiment tracking
+model.end_run()
 ```
 
-## Quick Start
+## License
 
-### 1. Initialize Project
-```bash
-# Create new project
-ez init my_project
-cd my_project
-```
-
-### 2. Prepare Your Data
-You have two options:
-
-a) Create a manifest file directly (`data/raw/manifest.jsonl`):
-```jsonl
-{"feature1": 1.0, "feature2": "value", "target": 0}
-{"feature1": 2.0, "feature2": "other", "target": 1}
-```
-
-b) Convert CSV using preprocessing config (`data/raw/preprocess.yaml`):
-
-
-
-### 3. Train Model
-```bash
-# Basic training
-ez train \
-  --model xgboost \
-  --manifest data/raw/manifest.jsonl \
-  --output models/model.pkl
-
-# With custom parameters
-ez train \
-  --model xgboost \
-  --manifest data/raw/manifest.jsonl \
-  --params '{"n_estimators": 200, "learning_rate": 0.05}' \
-  --output models/model.pkl
-```
-
-### 4. Make Predictions
-```bash
-ez predict \
-  --model models/model.pkl \
-  --manifest data/test_manifest.jsonl \
-  --output predictions.jsonl
-```
-
-## Example End-to-End Pipeline
-
-Here's a complete example using the Iris dataset:
-
-```bash
-# Create project
-ez init iris_project
-cd iris_project
-
-# Download Iris dataset
-python -c "
-from sklearn.datasets import load_iris
-import pandas as pd
-iris = load_iris()
-df = pd.DataFrame(iris.data, columns=iris.feature_names)
-df['target'] = iris.target
-df.to_csv('data/raw/iris.csv', index=False)
-"
-
-# Create preprocessing config
-cat > data/raw/preprocess.yaml << EOL
-workspace_dir: data
-input_file: data/raw/iris.csv
-target_column: target
-
-processors:
-  # Create manifest
-  - _target_: CreateManifestFromCSV
-    input_file: \${input_file}
-    key_mapping:
-      target: \${target_column}
-
-  # Add feature interactions
-  - _target_: AddComputedFields
-    computations:
-      - key: "petal_ratio"
-        operation: "ratio"
-        input_keys: ["petal length (cm)", "petal width (cm)"]
-      - key: "sepal_ratio"
-        operation: "ratio"
-        input_keys: ["sepal length (cm)", "sepal width (cm)"]
-
-  # Split data
-  - _target_: SplitManifest
-    splits:
-      train: 0.8
-      val: 0.2
-    shuffle: true
-    seed: 42
-    output_files:
-      train: \${workspace_dir}/train_manifest.jsonl
-      val: \${workspace_dir}/val_manifest.jsonl
-EOL
-
-# Process data
-python -c "
-from ezflow.data.processor import process_data
-process_data('data/raw/preprocess.yaml')
-"
-
-# Train model
-ez train \
-  --model xgboost \
-  --manifest data/train_manifest.jsonl \
-  --params '{
-    "n_estimators": 100,
-    "max_depth": 3,
-    "learning_rate": 0.1
-  }' \
-  --output models/iris_model.pkl
-
-# Make predictions
-ez predict \
-  --model models/iris_model.pkl \
-  --manifest data/val_manifest.jsonl \
-  --output predictions.jsonl
-
-# View results
-python -c "
-import json
-with open('predictions.jsonl') as f:
-    preds = [json.loads(line)['prediction'] for line in f]
-print(f'Predictions: {preds[:5]}')
-"
-```
-
-## 📁 Project Structure
-
-```
+This project is licensed under the MIT License - see the LICENSE file for details.

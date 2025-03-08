@@ -1,5 +1,9 @@
 from ezflow.models.base_model import BaseModel
 from ezflow.models.xgb_model import XGBoostModel
+from ezflow.models.model_factory import ModelFactory
+
+# Register available models with the factory
+ModelFactory.register_from_module('ezflow.models')
 
 def get_model(model_type, **kwargs):
     """
@@ -12,10 +16,5 @@ def get_model(model_type, **kwargs):
     Returns:
         BaseModel: An instance of a model that inherits from BaseModel
     """
-    if model_type.lower() == 'xgboost':
-        # Initialize with empty params if none provided
-        if 'params' not in kwargs:
-            kwargs['params'] = {}
-        return XGBoostModel(**kwargs)
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
+    # Use ModelFactory to create model
+    return ModelFactory.create(model_type, **kwargs)
